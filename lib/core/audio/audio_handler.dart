@@ -65,6 +65,8 @@ class KairoMPAudioHandler extends BaseAudioHandler with SeekHandler {
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
+        MediaAction.setShuffleMode,
+        MediaAction.setRepeatMode,
       },
       androidCompactActionIndices: const [0, 1, 2],
       processingState: const {
@@ -79,6 +81,14 @@ class KairoMPAudioHandler extends BaseAudioHandler with SeekHandler {
       bufferedPosition: _player.bufferedPosition,
       speed: _player.speed,
       queueIndex: event.currentIndex,
+      shuffleMode: _player.shuffleModeEnabled
+          ? AudioServiceShuffleMode.all
+          : AudioServiceShuffleMode.none,
+      repeatMode: const {
+        LoopMode.off: AudioServiceRepeatMode.none,
+        LoopMode.one: AudioServiceRepeatMode.one,
+        LoopMode.all: AudioServiceRepeatMode.all,
+      }[_player.loopMode]!,
     ));
   }
 
@@ -101,6 +111,23 @@ class KairoMPAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> stop() async {
     await _player.stop();
     await super.stop();
+  }
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    final enabled = shuffleMode != AudioServiceShuffleMode.none;
+    await _player.setShuffleModeEnabled(enabled);
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    final loopMode = const {
+      AudioServiceRepeatMode.none: LoopMode.off,
+      AudioServiceRepeatMode.one: LoopMode.one,
+      AudioServiceRepeatMode.all: LoopMode.all,
+      AudioServiceRepeatMode.group: LoopMode.all,
+    }[repeatMode]!;
+    await _player.setLoopMode(loopMode);
   }
 
   @override

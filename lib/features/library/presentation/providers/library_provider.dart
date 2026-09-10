@@ -94,7 +94,63 @@ class LibraryNotifier extends Notifier<LibraryState> {
 final libraryNotifierProvider =
     NotifierProvider<LibraryNotifier, LibraryState>(LibraryNotifier.new);
 
+class SearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setQuery(String query) {
+    state = query;
+  }
+}
+
+final searchQueryProvider =
+    NotifierProvider<SearchQueryNotifier, String>(SearchQueryNotifier.new);
+
 final songsStreamProvider = StreamProvider<List<Song>>((ref) {
   final songsDao = ref.watch(songsDaoProvider);
   return songsDao.watchAllSongs();
+});
+
+final albumsStreamProvider = StreamProvider<List<Album>>((ref) {
+  final songsDao = ref.watch(songsDaoProvider);
+  return songsDao.watchAllAlbums();
+});
+
+final artistsStreamProvider = StreamProvider<List<Artist>>((ref) {
+  final songsDao = ref.watch(songsDaoProvider);
+  return songsDao.watchAllArtists();
+});
+
+final filteredSongsProvider = Provider<AsyncValue<List<Song>>>((ref) {
+  final songsAsync = ref.watch(songsStreamProvider);
+  final query = ref.watch(searchQueryProvider).trim().toLowerCase();
+
+  return songsAsync.whenData((songs) {
+    if (query.isEmpty) return songs;
+    return songs
+        .where((s) =>
+            s.title.toLowerCase().contains(query) ||
+            s.filePath.toLowerCase().contains(query))
+        .toList();
+  });
+});
+
+final filteredAlbumsProvider = Provider<AsyncValue<List<Album>>>((ref) {
+  final albumsAsync = ref.watch(albumsStreamProvider);
+  final query = ref.watch(searchQueryProvider).trim().toLowerCase();
+
+  return albumsAsync.whenData((albums) {
+    if (query.isEmpty) return albums;
+    return albums.where((a) => a.title.toLowerCase().contains(query)).toList();
+  });
+});
+
+final filteredArtistsProvider = Provider<AsyncValue<List<Artist>>>((ref) {
+  final artistsAsync = ref.watch(artistsStreamProvider);
+  final query = ref.watch(searchQueryProvider).trim().toLowerCase();
+
+  return artistsAsync.whenData((artists) {
+    if (query.isEmpty) return artists;
+    return artists.where((a) => a.name.toLowerCase().contains(query)).toList();
+  });
 });

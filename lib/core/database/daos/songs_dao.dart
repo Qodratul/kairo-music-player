@@ -15,8 +15,26 @@ class SongsDao extends DatabaseAccessor<AppDatabase> with _$SongsDaoMixin {
     return select(songs).watch();
   }
 
+  Stream<List<Album>> watchAllAlbums() {
+    return select(albums).watch();
+  }
+
+  Stream<List<Artist>> watchAllArtists() {
+    return select(artists).watch();
+  }
+
   Future<List<Song>> getAllSongs() {
     return select(songs).get();
+  }
+
+  Future<Artist?> getArtistById(int? id) {
+    if (id == null) return Future.value(null);
+    return (select(artists)..where((a) => a.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<Album?> getAlbumById(int? id) {
+    if (id == null) return Future.value(null);
+    return (select(albums)..where((a) => a.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insertSong(SongsCompanion song) {

@@ -15,6 +15,16 @@ final playbackStateProvider = StreamProvider<PlaybackState>((ref) {
   return handler.playbackState;
 });
 
+class HudVisibilityNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void toggle() => state = !state;
+}
+
+final hudVisibleProvider =
+    NotifierProvider<HudVisibilityNotifier, bool>(HudVisibilityNotifier.new);
+
 class PlayerNotifier extends Notifier<void> {
   late final KairoMPAudioHandler _handler;
 
@@ -64,6 +74,26 @@ class PlayerNotifier extends Notifier<void> {
   Future<void> skipToNext() => _handler.skipToNext();
   Future<void> skipToPrevious() => _handler.skipToPrevious();
   Future<void> seek(Duration position) => _handler.seek(position);
+
+  Future<void> toggleShuffle() async {
+    final state = _handler.playbackState.value;
+    final isShuffle = state.shuffleMode == AudioServiceShuffleMode.all;
+    await _handler.setShuffleMode(
+      isShuffle ? AudioServiceShuffleMode.none : AudioServiceShuffleMode.all,
+    );
+  }
+
+  Future<void> cycleRepeatMode() async {
+    final state = _handler.playbackState.value;
+    final current = state.repeatMode;
+    final next = switch (current) {
+      AudioServiceRepeatMode.none => AudioServiceRepeatMode.all,
+      AudioServiceRepeatMode.all => AudioServiceRepeatMode.one,
+      AudioServiceRepeatMode.one => AudioServiceRepeatMode.none,
+      _ => AudioServiceRepeatMode.none,
+    };
+    await _handler.setRepeatMode(next);
+  }
 }
 
 final playerNotifierProvider = NotifierProvider<PlayerNotifier, void>(PlayerNotifier.new);

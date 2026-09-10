@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_provider.dart';
 import '../../data/scanner_repository.dart';
+import '../../domain/models/song_with_details.dart';
 
 class LibraryState {
   final bool isScanning;
@@ -57,10 +58,27 @@ class LibraryNotifier extends Notifier<LibraryState> {
 
           final companions = <SongsCompanion>[];
           for (final dto in scannedSongs) {
-            final artistId = await songsDao.getOrInsertArtist(dto.artist);
+            // Multi-artist splitting: extract primary artist and individual artists
+            final rawArtist = dto.artist ?? '';
+            final artistList = rawArtist.isNotEmpty
+                ? rawArtist.split(RegExp(r'\s*(?:/|&|;|,)\s*')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+                : <String>[];
+
+            final primaryArtistName = artistList.isNotEmpty ? artistList.first : (rawArtist.isNotEmpty ? rawArtist : null);
+
+            // Register all individual artist names to populate clean Artists table
+            int? primaryArtistId;
+            for (final name in artistList) {
+              final id = await songsDao.getOrInsertArtist(name);
+              primaryArtistId ??= id;
+            }
+            if (primaryArtistId == null && primaryArtistName != null) {
+              primaryArtistId = await songsDao.getOrInsertArtist(primaryArtistName);
+            }
+
             final albumId = await songsDao.getOrInsertAlbum(
               dto.album,
-              artistId,
+              primaryArtistId,
               dto.coverArtPath,
               dto.year,
             );
@@ -71,7 +89,7 @@ class LibraryNotifier extends Notifier<LibraryState> {
                 title: dto.title,
                 durationMs: dto.durationMs,
                 format: dto.format,
-                artistId: Value(artistId),
+                artistId: Value(primaryArtistId),
                 albumId: Value(albumId),
                 trackNumber: Value(dto.trackNumber),
                 sampleRate: Value(dto.sampleRate),
@@ -109,9 +127,9 @@ class SearchQueryNotifier extends Notifier<String> {
 final searchQueryProvider =
     NotifierProvider<SearchQueryNotifier, String>(SearchQueryNotifier.new);
 
-final songsStreamProvider = StreamProvider<List<Song>>((ref) {
+final songsWithDetailsStreamProvider = StreamProvider<List<SongWithDetails>>((ref) {
   final songsDao = ref.watch(songsDaoProvider);
-  return songsDao.watchAllSongs();
+  return songsDao.watchAllSongsWithDetails();
 });
 
 final albumsStreamProvider = StreamProvider<List<Album>>((ref) {
@@ -124,16 +142,23 @@ final artistsStreamProvider = StreamProvider<List<Artist>>((ref) {
   return songsDao.watchAllArtists();
 });
 
-final filteredSongsProvider = Provider<AsyncValue<List<Song>>>((ref) {
-  final songsAsync = ref.watch(songsStreamProvider);
+final playlistsStreamProvider = StreamProvider<List<Playlist>>((ref) {
+  final songsDao = ref.watch(songsDaoProvider);
+  return songsDao.watchAllPlaylists();
+});
+
+final filteredSongsProvider = Provider<AsyncValue<List<SongWithDetails>>>((ref) {
+  final songsAsync = ref.watch(songsWithDetailsStreamProvider);
   final query = ref.watch(searchQueryProvider).trim().toLowerCase();
 
   return songsAsync.whenData((songs) {
     if (query.isEmpty) return songs;
     return songs
         .where((s) =>
-            s.title.toLowerCase().contains(query) ||
-            s.filePath.toLowerCase().contains(query))
+            s.song.title.toLowerCase().contains(query) ||
+            s.artistName.toLowerCase().contains(query) ||
+            s.albumTitle.toLowerCase().contains(query) ||
+            s.song.filePath.toLowerCase().contains(query))
         .toList();
   });
 });

@@ -56,6 +56,8 @@ class ScannerRepository {
 
               try {
                 String? coverArtPath;
+
+                // Priority 1: Embedded picture in TagLib
                 final coverBytes = tagFile.coverData;
                 if (coverBytes != null && coverBytes.isNotEmpty) {
                   String extImg = '.jpg';
@@ -71,6 +73,30 @@ class ScannerRepository {
                     coverFile.writeAsBytesSync(coverBytes);
                   }
                   coverArtPath = coverFile.path;
+                }
+
+                // Priority 2: Fallback to image files in the same directory (cover.jpg, folder.jpg, etc.)
+                if (coverArtPath == null) {
+                  final songDir = Directory(p.dirname(entity.path));
+                  if (songDir.existsSync()) {
+                    final candidates = [
+                      'cover.jpg',
+                      'cover.jpeg',
+                      'cover.png',
+                      'folder.jpg',
+                      'folder.jpeg',
+                      'folder.png',
+                      'album.jpg',
+                      'album.png',
+                    ];
+                    for (final name in candidates) {
+                      final imgFile = File(p.join(songDir.path, name));
+                      if (imgFile.existsSync()) {
+                        coverArtPath = imgFile.path;
+                        break;
+                      }
+                    }
+                  }
                 }
 
                 final fallbackTitle = p.basenameWithoutExtension(entity.path);

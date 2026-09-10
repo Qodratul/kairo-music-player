@@ -2,12 +2,15 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/database_provider.dart';
 import '../../../core/theme/color_palette.dart';
 import '../../../core/theme/typography.dart';
 import '../../player/presentation/components/player_seekbar.dart';
 import '../../player/presentation/now_playing_screen.dart';
 import '../../player/presentation/providers/player_provider.dart';
-import '../../smart_playlist/presentation/smart_playlist_sheet.dart';
+import 'album_detail_screen.dart';
+import 'artist_detail_screen.dart';
+import 'playlist_detail_screen.dart';
 import 'components/album_card.dart';
 import 'components/artist_tile.dart';
 import 'components/song_tile.dart';
@@ -24,10 +27,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   final TextEditingController _scanPathController = TextEditingController(
     text: '/storage/emulated/0/Music',
   );
+  final TextEditingController _playlistNameController = TextEditingController();
 
   @override
   void dispose() {
     _scanPathController.dispose();
+    _playlistNameController.dispose();
     super.dispose();
   }
 
@@ -67,6 +72,47 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
+  void _showCreatePlaylistDialog() {
+    _playlistNameController.clear();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: KairoColors.surface,
+          title: const Text('Create New Playlist'),
+          content: TextField(
+            controller: _playlistNameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Playlist Name',
+              hintText: 'My Favorites',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = _playlistNameController.text.trim();
+                if (name.isNotEmpty) {
+                  final songsDao = ref.read(songsDaoProvider);
+                  await songsDao.createPlaylist(name);
+                }
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final libraryState = ref.watch(libraryNotifierProvider);
@@ -79,18 +125,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         appBar: AppBar(
           title: const Text('KairoMP Library'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.auto_awesome, color: KairoColors.primary),
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => const SmartPlaylistSheet(),
-                );
-              },
-              tooltip: 'AI Smart Playlist',
-            ),
+            // AI feature button temporarily hidden as requested
             if (libraryState.isScanning)
               const Padding(
                 padding: EdgeInsets.all(16.0),
@@ -176,8 +211,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final songsAsync = ref.watch(filteredSongsProvider);
 
     return songsAsync.when(
-      data: (songs) {
-        if (songs.isEmpty) {
+      data: (items) {
+        if (items.isEmpty) {
           return const Center(
             child: Text(
               'No songs found.',
@@ -186,18 +221,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           );
         }
         return ListView.builder(
-          itemCount: songs.length,
+          itemCount: items.length,
           itemBuilder: (context, index) {
-            final song = songs[index];
-            final isPlayingThis = currentItem?.id == song.filePath;
+            final item = items[index];
+            final isPlayingThis = currentItem?.id == item.song.filePath;
 
             return SongTile(
-              song: song,
+              item: item,
               isPlaying: isPlayingThis,
               onTap: () {
                 ref
                     .read(playerNotifierProvider.notifier)
-                    .playAll(songs, initialIndex: index);
+                    .playAllWithDetails(items, initialIndex: index);
               },
             );
           },
@@ -235,7 +270,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             return AlbumCard(
               album: album,
               onTap: () {
-                // Album details
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => AlbumDetailScreen(album: album),
+                  ),
+                );
               },
             );
           },
@@ -266,7 +305,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             return ArtistTile(
               artist: artist,
               onTap: () {
-                // Artist details
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ArtistDetailScreen(artist: artist),
+                  ),
+                );
               },
             );
           },
@@ -278,11 +321,70 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Widget _buildPlaylistsTab() {
-    return const Center(
-      child: Text(
-        'Playlists feature coming soon.',
-        style: KairoTypography.bodySmall,
-      ),
+    final playlistsAsync = ref.watch(playlistsStreamProvider);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: KairoColors.surfaceElevated,
+                foregroundColor: KairoColors.primary,
+                side: const BorderSide(color: KairoColors.surfaceBorder),
+              ),
+              onPressed: _showCreatePlaylistDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Create New Playlist'),
+            ),
+          ),
+        ),
+        Expanded(
+          child: playlistsAsync.when(
+            data: (playlists) {
+              if (playlists.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No playlists created yet.',
+                    style: KairoTypography.bodySmall,
+                  ),
+                );
+              }
+              return ListView.builder(
+                itemCount: playlists.length,
+                itemBuilder: (context, index) {
+                  final playlist = playlists[index];
+                  return ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: KairoColors.surfaceElevated,
+                      child: Icon(Icons.queue_music, color: KairoColors.primary),
+                    ),
+                    title: Text(
+                      playlist.name,
+                      style: KairoTypography.titleMedium.copyWith(fontSize: 15),
+                    ),
+                    subtitle: Text(
+                      'Created ${playlist.createdAt.day}/${playlist.createdAt.month}/${playlist.createdAt.year}',
+                      style: KairoTypography.bodySmall,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => PlaylistDetailScreen(playlist: playlist),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(child: Text('Error: $err')),
+          ),
+        ),
+      ],
     );
   }
 

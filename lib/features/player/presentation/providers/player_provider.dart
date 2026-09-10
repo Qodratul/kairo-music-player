@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/audio/audio_handler.dart';
 import '../../../../core/audio/audio_handler_provider.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../library/domain/models/song_with_details.dart';
 import '../../../library/presentation/providers/library_provider.dart';
 
 final currentMediaItemProvider = StreamProvider<MediaItem?>((ref) {
@@ -18,12 +19,12 @@ final playbackStateProvider = StreamProvider<PlaybackState>((ref) {
 
 final currentlyPlayingSongProvider = Provider<Song?>((ref) {
   final mediaItem = ref.watch(currentMediaItemProvider).value;
-  final songsAsync = ref.watch(songsStreamProvider);
+  final songsAsync = ref.watch(songsWithDetailsStreamProvider);
 
   if (mediaItem == null) return null;
   final songs = songsAsync.value ?? [];
   try {
-    return songs.firstWhere((s) => s.filePath == mediaItem.id);
+    return songs.firstWhere((s) => s.song.filePath == mediaItem.id).song;
   } catch (_) {
     return null;
   }
@@ -45,6 +46,55 @@ class PlayerNotifier extends Notifier<void> {
   @override
   void build() {
     _handler = ref.watch(audioHandlerProvider);
+  }
+
+  Future<void> playSongWithDetails(SongWithDetails item) async {
+    final mediaItem = MediaItem(
+      id: item.song.filePath,
+      title: item.song.title,
+      artist: item.artistName,
+      album: item.albumTitle,
+      duration: Duration(milliseconds: item.song.durationMs),
+      artUri: item.coverArtPath != null ? Uri.file(item.coverArtPath!) : null,
+      extras: {
+        'format': item.song.format,
+        'sampleRate': item.song.sampleRate,
+        'bitDepth': item.song.bitDepth,
+        'bitrate': item.song.bitrate,
+        'coverArtPath': item.coverArtPath,
+      },
+    );
+
+    await _handler.updateQueue([mediaItem]);
+    await _handler.play();
+  }
+
+  Future<void> playAllWithDetails(List<SongWithDetails> items, {int initialIndex = 0}) async {
+    if (items.isEmpty) return;
+
+    final mediaItems = items
+        .map(
+          (item) => MediaItem(
+            id: item.song.filePath,
+            title: item.song.title,
+            artist: item.artistName,
+            album: item.albumTitle,
+            duration: Duration(milliseconds: item.song.durationMs),
+            artUri: item.coverArtPath != null ? Uri.file(item.coverArtPath!) : null,
+            extras: {
+              'format': item.song.format,
+              'sampleRate': item.song.sampleRate,
+              'bitDepth': item.song.bitDepth,
+              'bitrate': item.song.bitrate,
+              'coverArtPath': item.coverArtPath,
+            },
+          ),
+        )
+        .toList();
+
+    await _handler.updateQueue(mediaItems);
+    await _handler.skipToQueueItem(initialIndex);
+    await _handler.play();
   }
 
   Future<void> playSong(Song song) async {

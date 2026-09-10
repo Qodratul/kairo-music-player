@@ -26,7 +26,7 @@ class _DevScreenState extends ConsumerState<DevScreen> {
   @override
   Widget build(BuildContext context) {
     final libraryState = ref.watch(libraryNotifierProvider);
-    final songsAsync = ref.watch(songsStreamProvider);
+    final songsAsync = ref.watch(songsWithDetailsStreamProvider);
     final currentItemAsync = ref.watch(currentMediaItemProvider);
     final playbackStateAsync = ref.watch(playbackStateProvider);
 
@@ -96,18 +96,18 @@ class _DevScreenState extends ConsumerState<DevScreen> {
           // Songs List Section
           Expanded(
             child: songsAsync.when(
-              data: (songs) {
-                if (songs.isEmpty) {
+              data: (items) {
+                if (items.isEmpty) {
                   return const Center(
                     child: Text('No songs found in database. Please scan a folder.'),
                   );
                 }
                 return ListView.builder(
-                  itemCount: songs.length,
+                  itemCount: items.length,
                   itemBuilder: (context, index) {
-                    final song = songs[index];
+                    final item = items[index];
                     final currentItem = currentItemAsync.value;
-                    final isPlayingThis = currentItem?.id == song.filePath;
+                    final isPlayingThis = currentItem?.id == item.song.filePath;
 
                     return ListTile(
                       leading: Icon(
@@ -115,7 +115,7 @@ class _DevScreenState extends ConsumerState<DevScreen> {
                         color: isPlayingThis ? Theme.of(context).primaryColor : null,
                       ),
                       title: Text(
-                        song.title,
+                        item.song.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -123,12 +123,12 @@ class _DevScreenState extends ConsumerState<DevScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        '${song.format.toUpperCase()} • ${_formatDuration(song.durationMs)}',
+                        '${item.song.format.toUpperCase()} • ${_formatDuration(item.song.durationMs)}',
                       ),
                       onTap: () {
                         ref
                             .read(playerNotifierProvider.notifier)
-                            .playAll(songs, initialIndex: index);
+                            .playAllWithDetails(items, initialIndex: index);
                       },
                     );
                   },

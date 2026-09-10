@@ -1,28 +1,77 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 
-import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/color_palette.dart';
 import '../../../../core/theme/typography.dart';
+import '../../domain/models/song_with_details.dart';
+import 'add_to_playlist_sheet.dart';
 
 class SongTile extends StatelessWidget {
-  final Song song;
+  final SongWithDetails item;
   final bool isPlaying;
-  final String? coverArtPath;
-  final String? artistName;
   final VoidCallback onTap;
+  final VoidCallback? onRemoveFromPlaylist;
 
   const SongTile({
     super.key,
-    required this.song,
+    required this.item,
     required this.isPlaying,
-    this.coverArtPath,
-    this.artistName,
     required this.onTap,
+    this.onRemoveFromPlaylist,
   });
+
+  void _showSongOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Material(
+          color: KairoColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.playlist_add, color: KairoColors.primary),
+                  title: const Text('Tambah ke Playlist'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => AddToPlaylistSheet(item: item),
+                    );
+                  },
+                ),
+                if (onRemoveFromPlaylist != null)
+                  ListTile(
+                    leading: const Icon(Icons.playlist_remove, color: KairoColors.accentRed),
+                    title: const Text(
+                      'Hapus dari Playlist ini',
+                      style: TextStyle(color: KairoColors.accentRed),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onRemoveFromPlaylist!();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final song = item.song;
+    final coverPath = item.coverArtPath;
+    final artistName = item.artistName;
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       leading: ClipRRect(
@@ -31,9 +80,9 @@ class SongTile extends StatelessWidget {
           width: 48,
           height: 48,
           color: KairoColors.surfaceElevated,
-          child: coverArtPath != null && File(coverArtPath!).existsSync()
+          child: coverPath != null && File(coverPath).existsSync()
               ? Image.file(
-                  File(coverArtPath!),
+                  File(coverPath),
                   fit: BoxFit.cover,
                 )
               : Icon(
@@ -72,7 +121,7 @@ class SongTile extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              artistName ?? 'Unknown Artist',
+              artistName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KairoTypography.bodySmall,
@@ -80,9 +129,18 @@ class SongTile extends StatelessWidget {
           ),
         ],
       ),
-      trailing: Text(
-        _formatDuration(song.durationMs),
-        style: KairoTypography.timestamp,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _formatDuration(song.durationMs),
+            style: KairoTypography.timestamp,
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_vert, size: 20, color: KairoColors.textSecondary),
+            onPressed: () => _showSongOptions(context),
+          ),
+        ],
       ),
       onTap: onTap,
     );

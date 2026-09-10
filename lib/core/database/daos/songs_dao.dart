@@ -27,6 +27,12 @@ class SongsDao extends DatabaseAccessor<AppDatabase> with _$SongsDaoMixin {
     return select(songs).get();
   }
 
+  Future<List<Song>> searchSongsFts(String query) {
+    if (query.trim().isEmpty) return getAllSongs();
+    final formattedQuery = '${query.trim().replaceAll("'", "''")}*';
+    return db.searchSongsFts(formattedQuery).get();
+  }
+
   Future<Artist?> getArtistById(int? id) {
     if (id == null) return Future.value(null);
     return (select(artists)..where((a) => a.id.equals(id))).getSingleOrNull();

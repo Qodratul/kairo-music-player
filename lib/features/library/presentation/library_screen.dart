@@ -7,6 +7,7 @@ import '../../../core/theme/typography.dart';
 import '../../player/presentation/components/player_seekbar.dart';
 import '../../player/presentation/now_playing_screen.dart';
 import '../../player/presentation/providers/player_provider.dart';
+import '../../smart_playlist/presentation/smart_playlist_sheet.dart';
 import 'components/album_card.dart';
 import 'components/artist_tile.dart';
 import 'components/song_tile.dart';
@@ -78,6 +79,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         appBar: AppBar(
           title: const Text('KairoMP Library'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.auto_awesome, color: KairoColors.primary),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const SmartPlaylistSheet(),
+                );
+              },
+              tooltip: 'AI Smart Playlist',
+            ),
             if (libraryState.isScanning)
               const Padding(
                 padding: EdgeInsets.all(16.0),

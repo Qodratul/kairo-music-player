@@ -28,6 +28,9 @@ part 'app_database.g.dart';
   daos: [
     SongsDao,
   ],
+  include: {
+    'tables/songs_fts.drift',
+  },
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());

@@ -3,6 +3,9 @@ import 'artists.dart';
 import 'albums.dart';
 
 @TableIndex(name: 'idx_songs_file_path', columns: {#filePath})
+@TableIndex(name: 'idx_songs_artist_id', columns: {#artistId})
+@TableIndex(name: 'idx_songs_album_id', columns: {#albumId})
+@TableIndex(name: 'idx_songs_play_count', columns: {#playCount})
 class Songs extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get artistId => integer().nullable().references(Artists, #id)();

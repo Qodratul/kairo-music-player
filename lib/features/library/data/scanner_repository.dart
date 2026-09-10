@@ -80,9 +80,16 @@ class ScannerRepository {
                 final durationMs = tagFile.duration.inMilliseconds;
                 final trackNumber = tagFile.track > 0 ? tagFile.track : null;
                 final year = tagFile.year > 0 ? tagFile.year : null;
+
+                final fileExt = ext.replaceAll('.', '').toUpperCase();
                 final format = (tagFile.format?.isNotEmpty == true)
-                    ? tagFile.format!.toLowerCase()
-                    : ext.replaceAll('.', '');
+                    ? tagFile.format!.toUpperCase()
+                    : fileExt;
+
+                final sampleRate = tagFile.sampleRate > 0 ? tagFile.sampleRate : 44100;
+                final bitrate = tagFile.bitrate > 0 ? tagFile.bitrate : 320;
+                final isLossless = tagFile.isLossless ?? (fileExt == 'FLAC' || fileExt == 'WAV');
+                final bitDepth = isLossless ? 24 : 16;
 
                 scannedSongs.add(ScannedSongDto(
                   filePath: entity.path,
@@ -95,6 +102,9 @@ class ScannerRepository {
                   coverArtPath: coverArtPath,
                   format: format,
                   fileSize: entity.lengthSync(),
+                  sampleRate: sampleRate,
+                  bitDepth: bitDepth,
+                  bitrate: bitrate,
                 ));
               } finally {
                 tagFile.close();

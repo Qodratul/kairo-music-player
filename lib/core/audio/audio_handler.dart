@@ -93,10 +93,32 @@ class KairoMPAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    playbackState.add(playbackState.value.copyWith(
+      playing: true,
+      controls: [
+        MediaControl.skipToPrevious,
+        MediaControl.pause,
+        MediaControl.skipToNext,
+        MediaControl.stop,
+      ],
+    ));
+    await _player.play();
+  }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() async {
+    playbackState.add(playbackState.value.copyWith(
+      playing: false,
+      controls: [
+        MediaControl.skipToPrevious,
+        MediaControl.play,
+        MediaControl.skipToNext,
+        MediaControl.stop,
+      ],
+    ));
+    await _player.pause();
+  }
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
@@ -115,12 +137,14 @@ class KairoMPAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    playbackState.add(playbackState.value.copyWith(shuffleMode: shuffleMode));
     final enabled = shuffleMode != AudioServiceShuffleMode.none;
     await _player.setShuffleModeEnabled(enabled);
   }
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    playbackState.add(playbackState.value.copyWith(repeatMode: repeatMode));
     final loopMode = const {
       AudioServiceRepeatMode.none: LoopMode.off,
       AudioServiceRepeatMode.one: LoopMode.one,

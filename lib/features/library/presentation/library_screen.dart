@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/color_palette.dart';
 import '../../../core/theme/typography.dart';
+import '../../player/presentation/components/player_seekbar.dart';
 import '../../player/presentation/now_playing_screen.dart';
 import '../../player/presentation/providers/player_provider.dart';
 import 'components/album_card.dart';
@@ -282,7 +283,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
 
     final isPlaying = playbackState?.playing ?? false;
-    final position = playbackState?.position ?? Duration.zero;
     final duration = currentItem.duration ?? Duration.zero;
 
     return InkWell(
@@ -343,28 +343,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ),
               ],
             ),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 8),
-                trackHeight: 2,
-                activeTrackColor: KairoColors.primary,
-                inactiveTrackColor: KairoColors.surfaceBorder,
-              ),
-              child: Slider(
-                value: position.inMilliseconds
-                    .clamp(0, duration.inMilliseconds)
-                    .toDouble(),
-                max: duration.inMilliseconds > 0
-                    ? duration.inMilliseconds.toDouble()
-                    : 1.0,
-                onChanged: (val) {
-                  ref
-                      .read(playerNotifierProvider.notifier)
-                      .seek(Duration(milliseconds: val.toInt()));
-                },
-              ),
-            ),
+            PlayerSeekbar(duration: duration, compact: true),
           ],
         ),
       ),

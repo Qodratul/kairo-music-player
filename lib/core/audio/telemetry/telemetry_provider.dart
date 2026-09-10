@@ -17,24 +17,39 @@ final audioDevicesStreamProvider = StreamProvider<Set<AudioDevice>>((ref) async*
 final audioTelemetryProvider = Provider<AudioTelemetry>((ref) {
   final loudnessState = ref.watch(dynamicLoudnessProvider);
   final devicesAsync = ref.watch(audioDevicesStreamProvider);
-  final currentItemAsync = ref.watch(currentMediaItemProvider);
+  final currentSong = ref.watch(currentlyPlayingSongProvider);
+  final mediaItem = ref.watch(currentMediaItemProvider).value;
 
   final activeDevices = devicesAsync.value ?? <AudioDevice>{};
   final routeName = _formatDeviceRoute(activeDevices);
 
-  final mediaItem = currentItemAsync.value;
+  // Dynamically resolve format
+  final rawFormat = currentSong?.format ?? (mediaItem?.extras?['format'] as String?);
+  final String sourceFormat = (rawFormat != null && rawFormat.trim().isNotEmpty)
+      ? rawFormat.toUpperCase()
+      : 'PCM';
 
-  final format = (mediaItem?.extras?['format'] as String?)?.toUpperCase() ?? 'FLAC';
-  final sampleRate = (mediaItem?.extras?['sampleRate'] as int?) ?? 44100;
-  final bitDepth = (mediaItem?.extras?['bitDepth'] as int?) ?? 16;
-  final bitrate = (mediaItem?.extras?['bitrate'] as int?) ?? 1411;
+  // Dynamically resolve sample rate
+  final int sampleRate = currentSong?.sampleRate ??
+      (mediaItem?.extras?['sampleRate'] as int?) ??
+      44100;
+
+  // Dynamically resolve bit depth
+  final int bitDepth = currentSong?.bitDepth ??
+      (mediaItem?.extras?['bitDepth'] as int?) ??
+      (sourceFormat == 'FLAC' || sourceFormat == 'WAV' ? 24 : 16);
+
+  // Dynamically resolve bitrate
+  final int bitrate = currentSong?.bitrate ??
+      (mediaItem?.extras?['bitrate'] as int?) ??
+      (sourceFormat == 'FLAC' ? 1411 : 320);
 
   // Standard Android AudioFlinger output sample rate
   const int defaultOutputSampleRate = 48000;
   final bool isResampled = sampleRate != defaultOutputSampleRate;
 
   return AudioTelemetry(
-    sourceFormat: format,
+    sourceFormat: sourceFormat,
     sampleRate: sampleRate,
     bitDepth: bitDepth,
     bitrate: bitrate,

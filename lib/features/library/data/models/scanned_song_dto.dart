@@ -9,6 +9,9 @@ class ScannedSongDto {
   final String? coverArtPath;
   final String format;
   final int fileSize;
+  final int? sampleRate;
+  final int? bitDepth;
+  final int? bitrate;
 
   ScannedSongDto({
     required this.filePath,
@@ -21,5 +24,8 @@ class ScannedSongDto {
     this.coverArtPath,
     required this.format,
     required this.fileSize,
+    this.sampleRate,
+    this.bitDepth,
+    this.bitrate,
   });
 }

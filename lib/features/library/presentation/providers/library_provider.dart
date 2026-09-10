@@ -74,6 +74,9 @@ class LibraryNotifier extends Notifier<LibraryState> {
                 artistId: Value(artistId),
                 albumId: Value(albumId),
                 trackNumber: Value(dto.trackNumber),
+                sampleRate: Value(dto.sampleRate),
+                bitDepth: Value(dto.bitDepth),
+                bitrate: Value(dto.bitrate),
               ),
             );
           }

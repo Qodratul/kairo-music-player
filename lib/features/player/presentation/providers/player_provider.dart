@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/audio/audio_handler.dart';
 import '../../../../core/audio/audio_handler_provider.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../library/presentation/providers/library_provider.dart';
 
 final currentMediaItemProvider = StreamProvider<MediaItem?>((ref) {
   final handler = ref.watch(audioHandlerProvider);
@@ -13,6 +14,19 @@ final currentMediaItemProvider = StreamProvider<MediaItem?>((ref) {
 final playbackStateProvider = StreamProvider<PlaybackState>((ref) {
   final handler = ref.watch(audioHandlerProvider);
   return handler.playbackState;
+});
+
+final currentlyPlayingSongProvider = Provider<Song?>((ref) {
+  final mediaItem = ref.watch(currentMediaItemProvider).value;
+  final songsAsync = ref.watch(songsStreamProvider);
+
+  if (mediaItem == null) return null;
+  final songs = songsAsync.value ?? [];
+  try {
+    return songs.firstWhere((s) => s.filePath == mediaItem.id);
+  } catch (_) {
+    return null;
+  }
 });
 
 class HudVisibilityNotifier extends Notifier<bool> {
@@ -38,6 +52,12 @@ class PlayerNotifier extends Notifier<void> {
       id: song.filePath,
       title: song.title,
       duration: Duration(milliseconds: song.durationMs),
+      extras: {
+        'format': song.format,
+        'sampleRate': song.sampleRate,
+        'bitDepth': song.bitDepth,
+        'bitrate': song.bitrate,
+      },
     );
 
     await _handler.updateQueue([mediaItem]);
@@ -53,6 +73,12 @@ class PlayerNotifier extends Notifier<void> {
             id: s.filePath,
             title: s.title,
             duration: Duration(milliseconds: s.durationMs),
+            extras: {
+              'format': s.format,
+              'sampleRate': s.sampleRate,
+              'bitDepth': s.bitDepth,
+              'bitrate': s.bitrate,
+            },
           ),
         )
         .toList();

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/color_palette.dart';
 import '../../../core/theme/typography.dart';
+import 'components/player_seekbar.dart';
 import 'components/telemetry_hud.dart';
 import 'providers/player_provider.dart';
 
@@ -36,7 +37,6 @@ class NowPlayingScreen extends ConsumerWidget {
     }
 
     final isPlaying = playbackState?.playing ?? false;
-    final position = playbackState?.position ?? Duration.zero;
     final duration = currentItem.duration ?? Duration.zero;
     final isShuffle = playbackState?.shuffleMode == AudioServiceShuffleMode.all;
     final repeatMode = playbackState?.repeatMode ?? AudioServiceRepeatMode.none;
@@ -78,7 +78,7 @@ class NowPlayingScreen extends ConsumerWidget {
             children: [
               if (!showHud) const Spacer(),
 
-              // High-Res Album Cover Art Display (collapses height if HUD is enabled)
+              // High-Res Album Cover Art Display
               Center(
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
@@ -150,50 +150,8 @@ class NowPlayingScreen extends ConsumerWidget {
 
               const SizedBox(height: 12),
 
-              // Interactive Seekbar Section
-              Column(
-                children: [
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                      trackHeight: 3,
-                      activeTrackColor: KairoColors.primary,
-                      inactiveTrackColor: KairoColors.surfaceBorder,
-                      thumbColor: KairoColors.primary,
-                    ),
-                    child: Slider(
-                      value: position.inMilliseconds
-                          .clamp(0, duration.inMilliseconds)
-                          .toDouble(),
-                      max: duration.inMilliseconds > 0
-                          ? duration.inMilliseconds.toDouble()
-                          : 1.0,
-                      onChanged: (val) {
-                        ref
-                            .read(playerNotifierProvider.notifier)
-                            .seek(Duration(milliseconds: val.toInt()));
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatDuration(position),
-                          style: KairoTypography.timestamp,
-                        ),
-                        Text(
-                          _formatDuration(duration),
-                          style: KairoTypography.timestamp,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              // Isolated Interactive Seekbar Section
+              PlayerSeekbar(duration: duration),
 
               const SizedBox(height: 12),
 
@@ -286,11 +244,5 @@ class NowPlayingScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _formatDuration(Duration d) {
-    final minutes = d.inMinutes;
-    final seconds = d.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 }

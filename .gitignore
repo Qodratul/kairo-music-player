@@ -77,3 +77,4 @@ android/gradleBuild/
 
 # File Environment / Konfigurasi Rahasia
 .env
+/lib/core/database/tables/songs_fts.drift
